@@ -33,6 +33,18 @@ MAX_STEER_RATE_FRAMES = 18  # tx control frames needed before torque can be cut
 # EPS allows user torque above threshold for 50 frames before permanently faulting
 MAX_USER_TORQUE = 500
 
+# IPAS Integration --- Addition for MPS Lab
+# Steer angle limits (tested at the Crows Landing track and considered ok)
+ANGLE_MAX_BP = [0., 5., 10.0] 	  # Added the value of 10mps 
+ANGLE_MAX_V = [510., 300., 150]	  # Added the steering angle limit of 150deg corresponding to 10mps
+ANGLE_DELTA_BP = [0., 5., 15.]
+ANGLE_DELTA_V = [5, 3.0, 1.0]     # windup limit 		#Changed the limits for 5 and 10 mps
+ANGLE_DELTA_VU = [5., 3.5, 1.5]   # unwind limit		#Changed the limits for 5 and 10 mps
+
+# High Beam Testing
+HIGHBEAM_ON_CMD =  b'\x40\x06\x30\x15\x00\x20\x00\x00'
+HIGHBEAM_OFF_CMD = b'\x40\x06\x30\x15\x00\x00\x00\x00'
+
 
 def get_long_tune(CP, params):
   if CP.carFingerprint in TSS2_CAR:
@@ -45,6 +57,30 @@ def get_long_tune(CP, params):
   return PIDController(0.0, (kiBP, kiV), k_f=1.0,
                        pos_limit=params.ACCEL_MAX, neg_limit=params.ACCEL_MIN,
                        rate=1 / (DT_CTRL * 3))
+
+# IPAS Integration --- Addition for MPS Lab
+def ipas_state_transition(steer_angle_enabled, enabled, ipas_active, ipas_reset_counter):
+
+  if enabled and not steer_angle_enabled:
+    #ipas_reset_counter = max(0, ipas_reset_counter - 1)
+    #if ipas_reset_counter == 0:
+    #  steer_angle_enabled = True
+    #else:
+    #  steer_angle_enabled = False
+    #return steer_angle_enabled, ipas_reset_counter
+    return True, 0
+
+  elif enabled and steer_angle_enabled:
+    if steer_angle_enabled and not ipas_active:
+      ipas_reset_counter += 1
+    else:
+      ipas_reset_counter = 0
+    if ipas_reset_counter > 10:  # try every 0.1s
+      steer_angle_enabled = False
+    return steer_angle_enabled, ipas_reset_counter
+
+  else:
+    return False, 0
 
 
 class CarController(CarControllerBase):
@@ -59,6 +95,12 @@ class CarController(CarControllerBase):
     self.permit_braking = True
     self.steer_rate_counter = 0
     self.distance_button = 0
+
+    ### IPAS Integration --- Addition by MPS Lab
+    self.ipas_steering_enabled=True
+    self.lkas_steering_enabled=False
+    self.steer_angle_enabled=False
+    self.ipas_reset_counter=0
 
     # *** start long control state ***
     self.long_pid = get_long_tune(self.CP, self.params)
@@ -126,10 +168,67 @@ class CarController(CarControllerBase):
 
     self.last_torque = apply_torque
 
+    # IPAS integration     --- Addition for MPS Lab
+    if self.CP.carFingerprint == CAR.TOYOTA_PRIUS:
+      # apply_torque = 0
+      # apply_steer_req = False
+      print(f"IPAS State : {CS.ipas_active}")
+      if lat_active:
+        self.steer_angle_enabled, self.ipas_reset_counter = ipas_state_transition(self.steer_angle_enabled, CC.enabled, CS.ipas_active, self.ipas_reset_counter)
+
+      if self.steer_angle_enabled and CS.ipas_active:
+        # print("Reaching here?")
+        apply_angle = actuators.steeringAngleDeg
+        angle_lim = np.interp(CS.out.vEgo, ANGLE_MAX_BP, ANGLE_MAX_V)
+        apply_angle = np.clip(apply_angle, -angle_lim, angle_lim)
+
+        # windup slower
+        if self.last_angle * apply_angle > 0. and abs(apply_angle) > abs(self.last_angle):
+          angle_rate_lim = np.interp(CS.out.vEgo, ANGLE_DELTA_BP, ANGLE_DELTA_V)
+        else:
+          angle_rate_lim = np.interp(CS.out.vEgo, ANGLE_DELTA_BP, ANGLE_DELTA_VU)
+        # print(f"angle_rate_lim:{angle_rate_lim}")
+        apply_angle = int(np.clip(apply_angle, self.last_angle - angle_rate_lim, self.last_angle + angle_rate_lim))
+        print()
+      else:
+        apply_angle = int(CS.out.steeringAngleDeg)
+
+      # apply_angle=-4
+      # print(f"apply_angle:{apply_angle}")
+
+      self.last_angle = apply_angle
+
+      if self.ipas_steering_enabled:
+        # print("here?")
+        can_sends.append(toyotacan.create_steer_command(self.packer, 0., 0))
+        can_sends.append(toyotacan.create_ipas_steer_command(self.packer, apply_angle, self.steer_angle_enabled,True))
+      else:
+        can_sends.append(toyotacan.create_steer_command(self.packer, apply_torque, apply_steer_req))
+        can_sends.append(toyotacan.create_ipas_steer_command(self.packer, 0, 0, True))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     # toyota can trace shows STEERING_LKA at 42Hz, with counter adding alternatively 1 and 2;
     # sending it at 100Hz seem to allow a higher rate limit, as the rate limit seems imposed
     # on consecutive messages
-    steer_command = toyotacan.create_steer_command(self.packer, apply_torque, apply_steer_req)
+    if self.CP.carFingerprint != CAR.TOYOTA_PRIUS:
+      steer_command = toyotacan.create_steer_command(self.packer, apply_torque, apply_steer_req)
+      can_sends.append(steer_command)
+
+
     if self.CP.flags & ToyotaFlags.SECOC.value:
       # TODO: check if this slow and needs to be done by the CANPacker
       steer_command = add_mac(self.secoc_key,
@@ -138,7 +237,9 @@ class CarController(CarControllerBase):
                               self.secoc_lka_message_counter,
                               steer_command)
       self.secoc_lka_message_counter += 1
-    can_sends.append(steer_command)
+
+    if self.CP.carFingerprint != CAR.TOYOTA_PRIUS:
+      can_sends.append(steer_command)
 
     # STEERING_LTA does not seem to allow more rate by sending faster, and may wind up easier
     if self.frame % 2 == 0 and self.CP.carFingerprint in TSS2_CAR:
@@ -167,7 +268,7 @@ class CarController(CarControllerBase):
 
     # on entering standstill, send standstill request
     if CS.out.standstill and not self.last_standstill and (self.CP.carFingerprint not in NO_STOP_TIMER_CAR):
-      self.standstill_req = True
+      self.standstill_req = False #Changed according to previous version of v0.5.12 which was true
     if CS.pcm_acc_status != 8:
       # pcm entered standstill or it's disabled
       self.standstill_req = False
@@ -269,12 +370,35 @@ class CarController(CarControllerBase):
                                                      hud_control.rightLaneDepart, CC.enabled, CS.lkas_hud))
 
       if (self.frame % 100 == 0 or send_ui) and (self.CP.enableDsu or self.CP.flags & ToyotaFlags.DISABLE_RADAR.value):
+        # print("fcw alert:", {fcw_alert})
         can_sends.append(toyotacan.create_fcw_command(self.packer, fcw_alert))
 
     # *** static msgs ***
     for addr, cars, bus, fr_step, vl in STATIC_DSU_MSGS:
       if self.frame % fr_step == 0 and self.CP.enableDsu and self.CP.carFingerprint in cars:
+        # print("Sending static DSU msg: ", hex(addr), bus)
+	# Added for faking APGS ECU and CAM ECU, This was done for MPS Lab
+        if fr_step==5 and bus==1 and addr in (0x240,0x241,0x244,0x245,0x248):
+          cnt = (((self.frame // 5) % 7) + 1) << 5
+          vl = bytes([cnt]) + vl
+        elif addr in (0x489, 0x48a) and bus == 0:
+          # add counter for those 2 messages (last 4 bits)
+          cnt = ((self.frame // 100) % 0xf) + 1
+          if addr == 0x48a:
+            # 0x48a has a 8 preceding the counter
+            cnt += 1 << 7
+          vl += bytes([cnt])
         can_sends.append(CanData(addr, vl, bus))
+
+    # Hacked Panda Functionality
+    if CC.enabled:
+      can_sends.append(CanData(195,b"random", 0))
+    else:
+      can_sends.append(CanData(196,b"random", 0))
+
+    # High Beam Testing
+    # can_sends.append(CanData(1872,HIGHBEAM_OFF_CMD, 0))
+
 
     # keep radar disabled
     if self.frame % 20 == 0 and self.CP.flags & ToyotaFlags.DISABLE_RADAR.value:

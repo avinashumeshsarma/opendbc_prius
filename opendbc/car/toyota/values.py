@@ -407,6 +407,28 @@ STATIC_DSU_MSGS = [
   (0x470, (CAR.TOYOTA_HIGHLANDER, CAR.TOYOTA_RAV4H, CAR.TOYOTA_SIENNA, CAR.LEXUS_CTH, CAR.LEXUS_ES, CAR.TOYOTA_PRIUS_V), 1,  100, b'\x00\x00\x01\x79'),
   (0x4CB, (CAR.TOYOTA_PRIUS, CAR.TOYOTA_RAV4H, CAR.LEXUS_RX, CAR.LEXUS_NX, CAR.TOYOTA_RAV4, CAR.TOYOTA_COROLLA, CAR.TOYOTA_HIGHLANDER, CAR.TOYOTA_AVALON,
            CAR.TOYOTA_SIENNA, CAR.LEXUS_CTH, CAR.LEXUS_ES, CAR.TOYOTA_PRIUS_V), 0, 100, b'\x0c\x00\x00\x00\x00\x00\x00\x00'),
+
+  (0x292, (CAR.TOYOTA_PRIUS), 0,   3, b'\x00\x00\x00\x00\x00\x00\x00\x9e'),        #APGS
+  (0x32E, (CAR.TOYOTA_PRIUS), 0,  20, b'\x00\x00\x00\x00\x00\x00\x00\x00'),        #APGS
+  (0x396, (CAR.TOYOTA_PRIUS), 0, 100, b'\xBD\x00\x00\x00\x60\x0F\x02\x00'),        #APGS
+  (0x43A, (CAR.TOYOTA_PRIUS), 0, 100, b'\x84\x00\x00\x00\x00\x00\x00\x00'),        #APGS
+  (0x43B, (CAR.TOYOTA_PRIUS), 0, 100, b'\x00\x00\x00\x00\x00\x00\x00\x00'),        #APGS
+  (0x497, (CAR.TOYOTA_PRIUS), 0, 100, b'\x00\x00\x00\x00\x00\x00\x00\x00'),        #APGS
+  (0x4CC, (CAR.TOYOTA_PRIUS), 0, 100, b'\x0D\x00\x00\x00\x00\x00\x00\x00'),        #APGS
+
+  (0x130, (CAR.TOYOTA_PRIUS), 1, 100, b'\x00\x00\x00\x00\x00\x00\x38'),            #CAM
+  (0x240, (CAR.TOYOTA_PRIUS), 1,   5, b'\x00\x10\x01\x00\x10\x01\x00'),            #CAM
+  (0x241, (CAR.TOYOTA_PRIUS), 1,   5, b'\x00\x10\x01\x00\x10\x01\x00'),            #CAM
+  (0x244, (CAR.TOYOTA_PRIUS), 1,   5, b'\x00\x10\x01\x00\x10\x01\x00'),            #CAM
+  (0x245, (CAR.TOYOTA_PRIUS), 1,   5, b'\x00\x10\x01\x00\x10\x01\x00'),            #CAM
+  (0x248, (CAR.TOYOTA_PRIUS), 1,   5, b'\x00\x00\x00\x00\x00\x00\x01'),            #CAM
+  (0x367, (CAR.TOYOTA_PRIUS), 0,  40, b'\x06\x00'),                                #CAM
+  (0x414, (CAR.TOYOTA_PRIUS), 0, 100, b'\x00\x00\x00\x00\x00\x00\x17\x00'),        #CAM
+  (0x466, (CAR.TOYOTA_PRIUS), 1, 100, b'\x20\x20\xAD'),                            #CAM
+  (0x489, (CAR.TOYOTA_PRIUS), 0, 100, b'\x00\x00\x00\x00\x00\x00\x00'),            #CAM
+  (0x48a, (CAR.TOYOTA_PRIUS), 0, 100, b'\x00\x00\x00\x00\x00\x00\x00'),            #CAM
+  (0x48b, (CAR.TOYOTA_PRIUS), 0, 100, b'\x66\x06\x08\x0a\x02\x00\x00\x00'),        #CAM
+  (0x4d3, (CAR.TOYOTA_PRIUS), 0, 100, b'\x1C\x00\x00\x01\x00\x00\x00\x00'),        #CAM
 ]
 
 

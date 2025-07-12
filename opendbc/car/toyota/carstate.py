@@ -126,6 +126,10 @@ class CarState(CarStateBase):
     ret.steerFaultTemporary = cp.vl["EPS_STATUS"]["LKA_STATE"] in TEMP_STEER_FAULTS
     ret.steerFaultPermanent = cp.vl["EPS_STATUS"]["LKA_STATE"] in PERM_STEER_FAULTS
 
+    # IPAS Integration  --- Addition by MPS Lab
+    self.ipas_active = cp.vl['EPS_STATUS']['IPAS_STATE'] == 3
+    # print(f"Auto-Park Status:{cp.vl['AUTOPARK_STATUS']['STATE'] != 0}")
+
     if self.CP.steerControlType == SteerControlType.angle:
       ret.steerFaultTemporary = ret.steerFaultTemporary or cp.vl["EPS_STATUS"]["LTA_STATE"] in TEMP_STEER_FAULTS
       ret.steerFaultPermanent = ret.steerFaultPermanent or cp.vl["EPS_STATUS"]["LTA_STATE"] in PERM_STEER_FAULTS
@@ -141,6 +145,7 @@ class CarState(CarStateBase):
       cluster_set_speed = cp.vl["PCM_CRUISE_ALT"]["UI_SET_SPEED"]
     else:
       ret.accFaulted = cp.vl["PCM_CRUISE_2"]["ACC_FAULTED"] != 0
+      # print(f"ACC_Faulted: {ret.accFaulted}")
       ret.cruiseState.available = cp.vl["PCM_CRUISE_2"]["MAIN_ON"] != 0
       ret.cruiseState.speed = cp.vl["PCM_CRUISE_2"]["SET_SPEED"] * CV.KPH_TO_MS
       cluster_set_speed = cp.vl["PCM_CRUISE_SM"]["UI_SET_SPEED"]
@@ -163,6 +168,7 @@ class CarState(CarStateBase):
        (self.CP.carFingerprint in TSS2_CAR and self.acc_type == 1):
       if self.CP.openpilotLongitudinalControl:
         ret.accFaulted = ret.accFaulted or cp.vl["PCM_CRUISE_2"]["LOW_SPEED_LOCKOUT"] == 2
+        print(f"Low_Speed_Lockout: {ret.accFaulted}")
 
     self.pcm_acc_status = cp.vl["PCM_CRUISE"]["CRUISE_STATE"]
     if self.CP.carFingerprint not in (NO_STOP_TIMER_CAR - TSS2_CAR):

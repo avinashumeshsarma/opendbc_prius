@@ -93,7 +93,7 @@ def create_acc_cancel_command(packer):
 
 def create_fcw_command(packer, fcw):
   values = {
-    "PCS_INDICATOR": 1,  # PCS turned off
+    "PCS_INDICATOR": 0,  # PCS turned off, indicator can be off with 0 # Original Value is 1.
     "FCW": fcw,
     "SET_ME_X20": 0x20,
     "SET_ME_X10": 0x10,
@@ -146,3 +146,28 @@ def create_ui_command(packer, steer, chime, left_line, right_line, left_lane_dep
     ]})
 
   return packer.make_can_msg("LKAS_HUD", 0, values)
+
+# """Addition of the IPAS commands to the newer architecture by MPS Lab - Only for Prius 2017"""
+
+def create_ipas_steer_command(packer, steer, enabled, apgs_enabled):
+  """Creates a CAN message for the Toyota Steer Command."""
+  if steer < 0:
+    direction = 3
+  elif steer > 0:
+    direction = 1
+  else:
+    direction = 2
+
+  mode = 3 if enabled else 1
+
+  values = {
+    "STATE": mode,
+    "DIRECTION_CMD": direction,
+    "ANGLE": steer,
+    "SET_ME_X10": 0x10,
+    "SET_ME_X40": 0x40
+  }
+  if apgs_enabled:
+    return packer.make_can_msg("STEERING_IPAS", 0, values)
+  else:
+    return packer.make_can_msg("STEERING_IPAS_COMMA", 0, values)

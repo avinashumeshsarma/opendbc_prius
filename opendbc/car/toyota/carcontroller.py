@@ -35,7 +35,7 @@ MAX_USER_TORQUE = 500
 
 # IPAS Integration --- Addition for MPS Lab
 # Steer angle limits (tested at the Crows Landing track and considered ok)
-ANGLE_MAX_BP = [0., 5., 10.0] 	  # Added the value of 10mps 
+ANGLE_MAX_BP = [0., 5., 10.0] 	  # Added the value of 10mps
 ANGLE_MAX_V = [510., 300., 150]	  # Added the steering angle limit of 150deg corresponding to 10mps
 ANGLE_DELTA_BP = [0., 5., 15.]
 ANGLE_DELTA_V = [5, 3.0, 1.0]     # windup limit 		#Changed the limits for 5 and 10 mps
@@ -198,7 +198,7 @@ class CarController(CarControllerBase):
 
       self.last_angle = apply_angle
 
-      if self.ipas_steering_enabled:
+      if self.ipas_steering_enabled and lat_active:
         # print("here?")
         can_sends.append(toyotacan.create_steer_command(self.packer, 0., 0))
         can_sends.append(toyotacan.create_ipas_steer_command(self.packer, apply_angle, self.steer_angle_enabled,True))
@@ -325,6 +325,7 @@ class CarController(CarControllerBase):
                                                speed=CS.out.vEgo,
                                                feedforward=pcm_accel_cmd,
                                                freeze_integrator=actuators.longControlState != LongCtrlState.pid)
+          print(f"Long State : {actuators.longControlState}")
         else:
           self.long_pid.reset()
 

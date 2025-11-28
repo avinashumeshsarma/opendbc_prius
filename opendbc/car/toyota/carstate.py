@@ -114,8 +114,8 @@ class CarState(CarStateBase):
         ret.steeringAngleDeg = torque_sensor_angle_deg - self.angle_offset.x
 
     ret.gearShifter = self.parse_gear_shifter(self.shifter_values.get(can_gear, None))
-    ret.leftBlinker = cp.vl["BLINKERS_STATE"]["TURN_SIGNALS"] == 1
-    ret.rightBlinker = cp.vl["BLINKERS_STATE"]["TURN_SIGNALS"] == 2
+    ret.leftBlinker = (cp.vl["BLINKERS_STATE"]["TURN_SIGNALS"] == 1) or bool(cp.vl["BLINKERS_STATE"]["HAZARD_LIGHT"])
+    ret.rightBlinker = (cp.vl["BLINKERS_STATE"]["TURN_SIGNALS"] == 2) or bool(cp.vl["BLINKERS_STATE"]["HAZARD_LIGHT"])
 
     ret.steeringTorque = cp.vl["STEER_TORQUE_SENSOR"]["STEER_TORQUE_DRIVER"]
     ret.steeringTorqueEps = cp.vl["STEER_TORQUE_SENSOR"]["STEER_TORQUE_EPS"] * self.eps_torque_scale
